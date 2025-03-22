@@ -1,8 +1,11 @@
+// *Autores:* Jhon Eduer Mosquera Canga
+// *Autores:* Jairo walinton Ramirez Valencia
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-// *Autores:* Jhon Eduer Mosquera Canga y [Nombre del compañero]
 
 /* -----------------------------------------------
    Estructura para representar un producto en el inventario
