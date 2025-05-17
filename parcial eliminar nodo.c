@@ -10,7 +10,6 @@ typedef struct Nodo {
     struct Nodo *izq, *der;
 } Nodo;
 
-// Crear un nuevo nodo
 Nodo* crearNodo(char nombre[], int anio, char genero[], float recaudacion) {
     Nodo* nuevo = (Nodo*)malloc(sizeof(Nodo));
     strcpy(nuevo->nombre, nombre);
@@ -21,12 +20,11 @@ Nodo* crearNodo(char nombre[], int anio, char genero[], float recaudacion) {
     return nuevo;
 }
 
-// Insertar en el árbol
 Nodo* insertar(Nodo* raiz, char nombre[], int anio, char genero[], float recaudacion) {
     if (raiz == NULL) {
         return crearNodo(nombre, anio, genero, recaudacion);
     }
-    if (anio < raiz->anio || anio == raiz->anio) {
+    if (anio <= raiz->anio) {
         raiz->izq = insertar(raiz->izq, nombre, anio, genero, recaudacion);
     } else {
         raiz->der = insertar(raiz->der, nombre, anio, genero, recaudacion);
@@ -34,7 +32,6 @@ Nodo* insertar(Nodo* raiz, char nombre[], int anio, char genero[], float recauda
     return raiz;
 }
 
-// Recorridos
 void inorden(Nodo* raiz) {
     if (raiz != NULL) {
         inorden(raiz->izq);
@@ -59,7 +56,6 @@ void posorden(Nodo* raiz) {
     }
 }
 
-// Buscar película por nombre
 Nodo* buscarPelicula(Nodo* raiz, char nombre[]) {
     if (raiz == NULL) return NULL;
     if (strcmp(raiz->nombre, nombre) == 0) return raiz;
@@ -68,7 +64,6 @@ Nodo* buscarPelicula(Nodo* raiz, char nombre[]) {
     return buscarPelicula(raiz->der, nombre);
 }
 
-// Mostrar películas de un género específico
 void mostrarGenero(Nodo* raiz, char genero[]) {
     if (raiz != NULL) {
         mostrarGenero(raiz->izq, genero);
@@ -79,13 +74,12 @@ void mostrarGenero(Nodo* raiz, char genero[]) {
     }
 }
 
-// Para encontrar los 3 fracasos taquilleros
 typedef struct {
     char nombre[100];
     float recaudacion;
 } Fracaso;
 
-void llenarFracasos(Nodo* raiz, Fracaso fracasos[], int *index) {
+void llenarFracasos(Nodo* raiz, Fracaso fracasos[], int* index) {
     if (raiz != NULL) {
         llenarFracasos(raiz->izq, fracasos, index);
         strcpy(fracasos[*index].nombre, raiz->nombre);
@@ -95,12 +89,10 @@ void llenarFracasos(Nodo* raiz, Fracaso fracasos[], int *index) {
     }
 }
 
-int comparar(const void *a, const void *b) {
-    Fracaso *fa = (Fracaso *)a;
-    Fracaso *fb = (Fracaso *)b;
-    if (fa->recaudacion > fb->recaudacion) return 1;
-    else if (fa->recaudacion < fb->recaudacion) return -1;
-    else return 0;
+int comparar(const void* a, const void* b) {
+    Fracaso* fa = (Fracaso*)a;
+    Fracaso* fb = (Fracaso*)b;
+    return (fa->recaudacion > fb->recaudacion) - (fa->recaudacion < fb->recaudacion);
 }
 
 void mostrarFracasos(Nodo* raiz) {
@@ -114,14 +106,51 @@ void mostrarFracasos(Nodo* raiz) {
     }
 }
 
-// Main
+Nodo* encontrarMinimo(Nodo* raiz) {
+    while (raiz && raiz->izq != NULL) {
+        raiz = raiz->izq;
+    }
+    return raiz;
+}
+
+Nodo* eliminar(Nodo* raiz, int anio) {
+    if (raiz == NULL) return NULL;
+
+    if (anio < raiz->anio) {
+        raiz->izq = eliminar(raiz->izq, anio);
+    } else if (anio > raiz->anio) {
+        raiz->der = eliminar(raiz->der, anio);
+    } else {
+        if (raiz->izq == NULL && raiz->der == NULL) {
+            free(raiz);
+            return NULL;
+        } else if (raiz->izq == NULL) {
+            Nodo* temp = raiz->der;
+            free(raiz);
+            return temp;
+        } else if (raiz->der == NULL) {
+            Nodo* temp = raiz->izq;
+            free(raiz);
+            return temp;
+        } else {
+            Nodo* sucesor = encontrarMinimo(raiz->der);
+            strcpy(raiz->nombre, sucesor->nombre);
+            raiz->anio = sucesor->anio;
+            strcpy(raiz->genero, sucesor->genero);
+            raiz->recaudacion = sucesor->recaudacion;
+            raiz->der = eliminar(raiz->der, sucesor->anio);
+        }
+    }
+    return raiz;
+}
+
 int main() {
     Nodo* raiz = NULL;
     int opcion;
     char nombre[100], genero[50];
     int anio;
     float recaudacion;
-    
+
     do {
         printf("\n--- MENÚ ---\n");
         printf("1. Insertar película\n");
@@ -131,10 +160,11 @@ int main() {
         printf("5. Buscar película por nombre\n");
         printf("6. Mostrar películas por género\n");
         printf("7. Mostrar 3 fracasos taquilleros\n");
+        printf("8. Eliminar película por año\n");
         printf("0. Salir\n");
         printf("Opción: ");
         scanf("%d", &opcion);
-        getchar(); // Consumir salto de línea
+        getchar();
 
         switch (opcion) {
             case 1:
@@ -168,11 +198,13 @@ int main() {
                 printf("Nombre de la película a buscar: ");
                 fgets(nombre, sizeof(nombre), stdin);
                 nombre[strcspn(nombre, "\n")] = 0;
-                Nodo* buscado = buscarPelicula(raiz, nombre);
-                if (buscado) {
-                    printf("Encontrado: %s (%d) [%s] - $%.2fM\n", buscado->nombre, buscado->anio, buscado->genero, buscado->recaudacion);
-                } else {
-                    printf("Película no encontrada.\n");
+                {
+                    Nodo* buscado = buscarPelicula(raiz, nombre);
+                    if (buscado) {
+                        printf("Encontrado: %s (%d) [%s] - $%.2fM\n", buscado->nombre, buscado->anio, buscado->genero, buscado->recaudacion);
+                    } else {
+                        printf("Película no encontrada.\n");
+                    }
                 }
                 break;
             case 6:
@@ -185,12 +217,20 @@ int main() {
             case 7:
                 mostrarFracasos(raiz);
                 break;
+            case 8:
+                printf("Ingrese el año de la película a eliminar: ");
+                scanf("%d", &anio);
+                getchar();
+                raiz = eliminar(raiz, anio);
+                printf("Película eliminada si existía.\n");
+                break;
             case 0:
                 printf("Saliendo...\n");
                 break;
             default:
                 printf("Opción inválida.\n");
         }
+
     } while (opcion != 0);
 
     return 0;
